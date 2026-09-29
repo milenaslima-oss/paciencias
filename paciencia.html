@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo de Paciência</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background-color: #0d6333;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: white;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    .controls {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #ffffff;
+      color: #0d6333;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    button:hover {
+      background-color: #e0e0e0;
+    }
+    .board {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      width: 100%;
+      max-width: 900px;
+    }
+    .top-row, .bottom-row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .slot {
+      width: 100px;
+      height: 140px;
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 8px;
+      position: relative;
+    }
+    .deck-container {
+      display: flex;
+      gap: 15px;
+    }
+    .foundations {
+      display: flex;
+      gap: 15px;
+    }
+    .tableau {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .tableau-column {
+      width: 100px;
+      min-height: 140px;
+      position: relative;
+    }
+    .card {
+      width: 100px;
+      height: 140px;
+      background-color: white;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .card.face-down {
+      background: linear-gradient(135deg, #1e5799 0%,#2989d8 50%,#207cca 51%,#7db9e8 100%);
+      border: 2px solid #fff;
+    }
+    .card.face-down * {
+      display: none;
+    }
+    .red {
+      color: #e74c3c;
+    }
+    .black {
+      color: #2c3e50;
+    }
+    .card-corner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+    }
+    .card-center {
+      font-size: 32px;
+      align-self: center;
+    }
+    .bottom-corner {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Paciência</h1>
+  <div class="controls">
+    <button onclick="initGame()">Novo Jogo</button>
+  </div>
+
+  <div class="board">
+    <div class="top-row">
+      <div class="deck-container">
+        <div id="stock" class="slot" onclick="drawCard()"></div>
+        <div id="waste" class="slot"></div>
+      </div>
+      <div class="foundations">
+        <div id="foundation-0" class="slot" onclick="handleSlotClick('foundation', 0)"></div>
+        <div id="foundation-1" class="slot" onclick="handleSlotClick('foundation', 1)"></div>
+        <div id="foundation-2" class="slot" onclick="handleSlotClick('foundation', 2)"></div>
+        <div id="foundation-3" class="slot" onclick="handleSlotClick('foundation', 3)"></div>
+      </div>
+    </div>
+
+    <div class="tableau">
+      <div id="tableau-0" class="tableau-column" onclick="handleSlotClick('tableau', 0)"></div>
+      <div id="tableau-1" class="tableau-column" onclick="handleSlotClick('tableau', 1)"></div>
+      <div id="tableau-2" class="tableau-column" onclick="handleSlotClick('tableau', 2)"></div>
+      <div id="tableau-3" class="tableau-column" onclick="handleSlotClick('tableau', 3)"></div>
+      <div id="tableau-4" class="tableau-column" onclick="handleSlotClick('tableau', 4)"></div>
+      <div id="tableau-5" class="tableau-column" onclick="handleSlotClick('tableau', 5)"></div>
+      <div id="tableau-6" class="tableau-column" onclick="handleSlotClick('tableau', 6)"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUITS = ['♠', '♥', '♦', '♣'];
+    const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    
+    let stock = [];
+    let waste = [];
+    let foundations = [[], [], [], []];
+    let tableau = [[], [], [], [], [], [], []];
+    let selectedCard = null; // { source: 'waste'|'tableau'|'foundation', colIndex, cardIndex }
+
+    function createDeck() {
+      let deck = [];
+      for (let suit of SUITS) {
+        for (let value of VALUES) {
+          deck.push({
+            suit,
+            value,
+            color: (suit === '♥' || suit === '♦') ? 'red' : 'black',
+            faceUp: false,
+            numericValue: VALUES.indexOf(value) + 1
+          });
+        }
+      }
+      return shuffle(deck);
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function initGame() {
+      let deck = createDeck();
+      foundations = [[], [], [], []];
+      tableau = [[], [], [], [], [], [], []];
+      waste = [];
+      selectedCard = null;
+
+      // Distribuir para o Tableau
+      for (let i = 0; i < 7; i++) {
+        for (let j = i; j < 7; j++) {
+          let card = deck.pop();
+          if (i === j) card.faceUp = true;
+          tableau[j].push(card);
+        }
+      }
+
+      stock = deck;
+      render();
+    }
+
+    function drawCard() {
+      selectedCard = null;
+      if (stock.length > 0) {
+        let card = stock.pop();
+        card.faceUp = true;
+        waste.push(card);
+      } else {
+        // Reiniciar o monte
+        while (waste.length > 0) {
+          let card = waste.pop();
+          card.faceUp = false;
+          stock.push(card);
+        }
+      }
+      render();
+    }
+
+    function selectCard(source, colIndex, cardIndex, event) {
+      event.stopPropagation();
+
+      // Desmarcar se clicar na mesma carta
+      if (selectedCard && selectedCard.source === source && 
+          selectedCard.colIndex === colIndex && selectedCard.cardIndex === cardIndex) {
+        selectedCard = null;
+        render();
+        return;
+      }
+
+      if (selectedCard) {
+        // Tentar mover a carta selecionada para esta
+        if (source === 'tableau') {
+          tryMoveToTableau(colIndex);
+        } else if (source === 'foundation') {
+          tryMoveToFoundation(colIndex);
+        }
+      } else {
+        // Selecionar carta
+        if (source === 'waste' && waste.length > 0) {
+          selectedCard = { source: 'waste' };
+        } else if (source === 'tableau') {
+          let col = tableau[colIndex];
+          if (col.length > 0 && col[cardIndex].faceUp) {
+            selectedCard = { source: 'tableau', colIndex, cardIndex };
+          }
+        } else if (source === 'foundation') {
+          let f = foundations[colIndex];
+          if (f.length > 0) {
+            selectedCard = { source: 'foundation', colIndex };
+          }
+        }
+      }
+      render();
+    }
+
+    function handleSlotClick(type, index) {
+      if (!selectedCard) return;
+
+      if (type === 'tableau') {
+        tryMoveToTableau(index);
+      } else if (type === 'foundation') {
+        tryMoveToFoundation(index);
+      }
+      render();
+    }
+
+    function getSelectedCards() {
+      if (!selectedCard) return [];
+      if (selectedCard.source === 'waste') return [waste[waste.length - 1]];
+      if (selectedCard.source === 'foundation') return [foundations[selectedCard.colIndex][foundations[selectedCard.colIndex].length - 1]];
+      if (selectedCard.source === 'tableau') {
+        return tableau[selectedCard.colIndex].slice(selectedCard.cardIndex);
+      }
+      return [];
+    }
+
+    function removeSelectedCards() {
+      if (selectedCard.source === 'waste') {
+        waste.pop();
+      } else if (selectedCard.source === 'foundation') {
+        foundations[selectedCard.colIndex].pop();
+      } else if (selectedCard.source === 'tableau') {
+        tableau[selectedCard.colIndex].splice(selectedCard.cardIndex);
+        // Revelar a última carta da coluna se estiver virada para baixo
+        let col = tableau[selectedCard.colIndex];
+        if (col.length > 0 && !col[col.length - 1].faceUp) {
+          col[col.length - 1].faceUp = true;
+        }
+      }
+      selectedCard = null;
+    }
+
+    function tryMoveToTableau(targetCol) {
+      let cardsToMove = getSelectedCards();
+      if (cardsToMove.length === 0) return;
+
+      let movingCard = cardsToMove[0];
+      let targetColumn = tableau[targetCol];
+      let topTargetCard = targetColumn[targetColumn.length - 1];
+
+      let isValid = false;
+
+      if (!topTargetCard) {
+        // Coluna vazia só aceita Rei (K)
+        if (movingCard.value === 'K') isValid = true;
+      } else {
+        // Regra: cor oposta e valor numérico 1 a menos
+        if (movingCard.color !== topTargetCard.color && 
+            movingCard.numericValue === topTargetCard.numericValue - 1) {
+          isValid = true;
+        }
+      }
+
+      if (isValid) {
+        tableau[targetCol].push(...cardsToMove);
+        removeSelectedCards();
+      }
+    }
+
+    function tryMoveToFoundation(targetIndex) {
+      let cardsToMove = getSelectedCards();
+      if (cardsToMove.length !== 1) return; // Só pode mover 1 carta por vez para a fundação
+
+      let movingCard = cardsToMove[0];
+      let targetFoundation = foundations[targetIndex];
+      let topCard = targetFoundation[targetFoundation.length - 1];
+
+      let isValid = false;
+
+      if (!topCard) {
+        // Fundação vazia só aceita Ás
+        if (movingCard.value === 'A') isValid = true;
+      } else {
+        // Regra: mesmo naipe e valor numérico 1 a mais
+        if (movingCard.suit === topCard.suit && 
+            movingCard.numericValue === topCard.numericValue + 1) {
+          isValid = true;
+        }
+      }
+
+      if (isValid) {
+        foundations[targetIndex].push(movingCard);
+        removeSelectedCards();
+        checkWin();
+      }
+    }
+
+    function checkWin() {
+      let win = foundations.every(f => f.length === 13);
+      if (win) {
+        setTimeout(() => alert('Parabéns! Você venceu o jogo! 🎉'), 100);
+      }
+    }
+
+    function renderCardUI(card, topPos, isSelected) {
+      let div = document.createElement('div');
+      div.className = `card ${card.faceUp ? card.color : 'face-down'}`;
+      if (topPos !== undefined) div.style.top = `${topPos}px`;
+      if (isSelected) div.style.outline = '3px solid #f1c40f';
+
+      if (card.faceUp) {
+        div.innerHTML = `
+          <div class="card-corner">
+            <div>${card.value}</div>
+            <div>${card.suit}</div>
+          </div>
+          <div class="card-center">${card.suit}</div>
+          <div class="card-corner bottom-corner">
+            <div>${card.value}</div>
+            <div>${card.suit}</div>
+          </div>
+        `;
+      }
+      return div;
+    }
+
+    function render() {
+      // Render Stock
+      let stockSlot = document.getElementById('stock');
+      stockSlot.innerHTML = '';
+      if (stock.length > 0) {
+        let cardDiv = renderCardUI({ faceUp: false });
+        stockSlot.appendChild(cardDiv);
+      }
+
+      // Render Waste
+      let wasteSlot = document.getElementById('waste');
+      wasteSlot.innerHTML = '';
+      if (waste.length > 0) {
+        let topCard = waste[waste.length - 1];
+        let isSelected = selectedCard && selectedCard.source === 'waste';
+        let cardDiv = renderCardUI(topCard, 0, isSelected);
+        cardDiv.onclick = (e) => selectCard('waste', null, null, e);
+        wasteSlot.appendChild(cardDiv);
+      }
+
+      // Render Foundations
+      for (let i = 0; i < 4; i++) {
+        let fSlot = document.getElementById(`foundation-${i}`);
+        fSlot.innerHTML = '';
+        let f = foundations[i];
+        if (f.length > 0) {
+          let topCard = f[f.length - 1];
+          let isSelected = selectedCard && selectedCard.source === 'foundation' && selectedCard.colIndex === i;
+          let cardDiv = renderCardUI(topCard, 0, isSelected);
+          cardDiv.onclick = (e) => selectCard('foundation', i, f.length - 1, e);
+          fSlot.appendChild(cardDiv);
+        }
+      }
+
+      // Render Tableau
+      for (let i = 0; i < 7; i++) {
+        let tCol = document.getElementById(`tableau-${i}`);
+        tCol.innerHTML = '';
+        let col = tableau[i];
+        
+        col.forEach((card, cardIndex) => {
+          let isSelected = selectedCard && selectedCard.source === 'tableau' && 
+                           selectedCard.colIndex === i && selectedCard.cardIndex <= cardIndex;
+          let cardDiv = renderCardUI(card, cardIndex * 25, isSelected);
+          cardDiv.onclick = (e) => selectCard('tableau', i, cardIndex, e);
+          tCol.appendChild(cardDiv);
+        });
+      }
+    }
+
+    // Iniciar jogo ao carregar
+    initGame();
+  </script>
+</body>
+</html>

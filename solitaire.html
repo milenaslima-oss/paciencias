@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Paciência dos Gatinhos 🐾</title>
+  <style>
+    :root {
+      --bg-color: #fde2e4;
+      --card-bg: #ffffff;
+      --pink-accent: #ffb3c6;
+      --pink-dark: #ff85a1;
+      --purple-accent: #c084fc;
+      --slot-border: #f8ad9d;
+      --text-color: #5c4d4d;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: 2rem;
+      color: #ff5c8d;
+      text-shadow: 2px 2px 0px #fff;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+    }
+
+    button {
+      background-color: var(--pink-dark);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.1s, background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #ff477e;
+      transform: scale(1.05);
+    }
+
+    .game-board {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .top-row, .bottom-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+    }
+
+    .stock-waste, .foundations, .tableau {
+      display: flex;
+      gap: 15px;
+    }
+
+    .slot {
+      width: 90px;
+      height: 130px;
+      border: 3px dashed var(--slot-border);
+      border-radius: 12px;
+      position: relative;
+      background-color: rgba(255, 255, 255, 0.3);
+      box-sizing: border-box;
+    }
+
+    .card {
+      width: 90px;
+      height: 130px;
+      border-radius: 12px;
+      position: absolute;
+      background-color: var(--card-bg);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8px;
+      box-sizing: border-box;
+      cursor: pointer;
+      border: 2px solid #ffccd5;
+      transition: top 0.2s, left 0.2s;
+    }
+
+    .card.face-down {
+      background: linear-gradient(135deg, #ffb3c6 25%, #ffcbf2 25%, #ffcbf2 50%, #ffb3c6 50%, #ffb3c6 75%, #ffcbf2 75%, #ffcbf2 100%);
+      background-size: 20px 20px;
+      border: 3px solid #ffffff;
+    }
+
+    .card.face-down::after {
+      content: '🐾';
+      font-size: 2rem;
+      margin: auto;
+    }
+
+    .card.red { color: #ff477e; }
+    .card.black { color: #6b7280; }
+
+    .card-corner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .card-center {
+      font-size: 2rem;
+      text-align: center;
+      margin: auto;
+    }
+
+    .tableau-column {
+      width: 90px;
+      min-height: 130px;
+      position: relative;
+    }
+
+    .win-message {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 25px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      text-align: center;
+      z-index: 100;
+      border: 5px solid var(--pink-dark);
+    }
+
+    .win-message h2 {
+      color: #ff477e;
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Paciência dos Gatinhos 🐾</h1>
+  
+  <div class="controls">
+    <button onclick="initGame()">Novo Jogo 🌸</button>
+  </div>
+
+  <div class="game-board">
+    <!-- Linha Superior: Monte, Descarte e Fundações -->
+    <div class="top-row">
+      <div class="stock-waste">
+        <div id="stock" class="slot" onclick="drawCard()"></div>
+        <div id="waste" class="slot"></div>
+      </div>
+      <div class="foundations">
+        <div id="foundation-0" class="slot" data-suit="♥"></div>
+        <div id="foundation-1" class="slot" data-suit="♦"></div>
+        <div id="foundation-2" class="slot" data-suit="♣"></div>
+        <div id="foundation-3" class="slot" data-suit="♠"></div>
+      </div>
+    </div>
+
+    <!-- Linha Inferior: 7 Colunas do Jogo -->
+    <div class="bottom-row">
+      <div id="tableau-0" class="tableau-column slot"></div>
+      <div id="tableau-1" class="tableau-column slot"></div>
+      <div id="tableau-2" class="tableau-column slot"></div>
+      <div id="tableau-3" class="tableau-column slot"></div>
+      <div id="tableau-4" class="tableau-column slot"></div>
+      <div id="tableau-5" class="tableau-column slot"></div>
+      <div id="tableau-6" class="tableau-column slot"></div>
+    </div>
+  </div>
+
+  <div id="win-message" class="win-message">
+    <h2>🎉 Você Venceu! 🎉</h2>
+    <p>Os gatinhos estão super orgulhosos de você! 🐱✨</p>
+    <button onclick="initGame()">Jogar Novamente 🐾</button>
+  </div>
+
+  <script>
+    const SUITS = ['♥', '♦', '♣', '♠'];
+    const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const SUIT_ICONS = {
+      '♥': '🐱', // Gatinho
+      '♦': '🐟', // Peixinho
+      '♣': '🐾', // Patinha
+      '♠': '🧶'  // Novelo de Lã
+    };
+
+    let deck = [];
+    let waste = [];
+    let foundations = [[], [], [], []];
+    let tableau = [[], [], [], [], [], [], []];
+    let selectedCard = null;
+
+    function createDeck() {
+      const newDeck = [];
+      for (let suit of SUITS) {
+        for (let i = 0; i < VALUES.length; i++) {
+          newDeck.push({
+            suit: suit,
+            value: VALUES[i],
+            numericValue: i + 1,
+            color: (suit === '♥' || suit === '♦') ? 'red' : 'black',
+            faceUp: false
+          });
+        }
+      }
+      return newDeck;
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function initGame() {
+      document.getElementById('win-message').style.display = 'none';
+      deck = createDeck();
+      shuffle(deck);
+      waste = [];
+      foundations = [[], [], [], []];
+      tableau = [[], [], [], [], [], [], []];
+      selectedCard = null;
+
+      // Distribuir para as colunas
+      for (let i = 0; i < 7; i++) {
+        for (let j = 0; j <= i; j++) {
+          const card = deck.pop();
+          if (j === i) card.faceUp = true;
+          tableau[i].push(card);
+        }
+      }
+
+      render();
+    }
+
+    function render() {
+      // Renderizar Stock
+      const stockEl = document.getElementById('stock');
+      stockEl.innerHTML = '';
+      if (deck.length > 0) {
+        const cardEl = createCardElement({ faceUp: false });
+        stockEl.appendChild(cardEl);
+      }
+
+      // Renderizar Waste
+      const wasteEl = document.getElementById('waste');
+      wasteEl.innerHTML = '';
+      if (waste.length > 0) {
+        const topCard = waste[waste.length - 1];
+        const cardEl = createCardElement(topCard);
+        cardEl.onclick = (e) => { e.stopPropagation(); selectCard('waste', waste.length - 1); };
+        if (isSelected('waste', waste.length - 1)) cardEl.style.border = '3px solid #c084fc';
+        wasteEl.appendChild(cardEl);
+      }
+
+      // Renderizar Foundations
+      for (let i = 0; i < 4; i++) {
+        const foundEl = document.getElementById(`foundation-${i}`);
+        foundEl.innerHTML = '';
+        foundEl.onclick = () => handleFoundationClick(i);
+        
+        if (foundations[i].length > 0) {
+          const topCard = foundations[i][foundations[i].length - 1];
+          const cardEl = createCardElement(topCard);
+          foundEl.appendChild(cardEl);
+        } else {
+          foundEl.setAttribute('data-icon', SUIT_ICONS[SUITS[i]]);
+        }
+      }
+
+      // Renderizar Tableau
+      for (let i = 0; i < 7; i++) {
+        const colEl = document.getElementById(`tableau-${i}`);
+        colEl.innerHTML = '';
+        colEl.onclick = () => handleTableauClick(i);
+
+        tableau[i].forEach((card, cardIdx) => {
+          const cardEl = createCardElement(card);
+          cardEl.style.top = `${cardIdx * 25}px`;
+          
+          if (card.faceUp) {
+            cardEl.onclick = (e) => {
+              e.stopPropagation();
+              selectCard('tableau', i, cardIdx);
+            };
+          }
+
+          if (isSelected('tableau', i, cardIdx)) {
+            cardEl.style.border = '3px solid #c084fc';
+          }
+
+          colEl.appendChild(cardEl);
+        });
+      }
+
+      checkWin();
+    }
+
+    function createCardElement(card) {
+      const div = document.createElement('div');
+      div.className = `card ${card.faceUp ? card.color : 'face-down'}`;
+
+      if (card.faceUp) {
+        const icon = SUIT_ICONS[card.suit];
+        div.innerHTML = `
+          <div class="card-corner">
+            <div>${card.value}</div>
+            <div style="font-size: 0.8rem">${card.suit}</div>
+          </div>
+          <div class="card-center">${icon}</div>
+          <div class="card-corner" style="transform: rotate(180deg)">
+            <div>${card.value}</div>
+            <div style="font-size: 0.8rem">${card.suit}</div>
+          </div>
+        `;
+      }
+      return div;
+    }
+
+    function drawCard() {
+      if (deck.length > 0) {
+        const card = deck.pop();
+        card.faceUp = true;
+        waste.push(card);
+      } else {
+        while (waste.length > 0) {
+          const card = waste.pop();
+          card.faceUp = false;
+          deck.push(card);
+        }
+      }
+      selectedCard = null;
+      render();
+    }
+
+    function selectCard(source, colIndex, cardIndex = null) {
+      if (selectedCard && selectedCard.source === source && selectedCard.colIndex === colIndex && selectedCard.cardIndex === cardIndex) {
+        selectedCard = null; // Deselecionar
+      } else if (selectedCard) {
+        // Tentar mover para tableau
+        if (source === 'tableau') {
+          handleTableauClick(colIndex);
+        }
+      } else {
+        selectedCard = { source, colIndex, cardIndex };
+      }
+      render();
+    }
+
+    function isSelected(source, colIndex, cardIndex = null) {
+      if (!selectedCard) return false;
+      return selectedCard.source === source && 
+             selectedCard.colIndex === colIndex && 
+             selectedCard.cardIndex === cardIndex;
+    }
+
+    function handleTableauClick(colIndex) {
+      if (!selectedCard) return;
+
+      const targetCol = tableau[colIndex];
+      const topTargetCard = targetCol[targetCol.length - 1];
+
+      let movingCards = [];
+      if (selectedCard.source === 'waste') {
+        movingCards = [waste[waste.length - 1]];
+      } else if (selectedCard.source === 'tableau') {
+        movingCards = tableau[selectedCard.colIndex].slice(selectedCard.cardIndex);
+      }
+
+      const firstMovingCard = movingCards[0];
+
+      // Validação de regra do Solitaire (Cores alternadas e valor decrescente)
+      let isValidMove = false;
+      if (targetCol.length === 0) {
+        if (firstMovingCard.numericValue === 13) isValidMove = true; // Rei no lugar vazio
+      } else if (topTargetCard.faceUp) {
+        if (topTargetCard.color !== firstMovingCard.color && topTargetCard.numericValue === firstMovingCard.numericValue + 1) {
+          isValidMove = true;
+        }
+      }
+
+      if (isValidMove) {
+        // Executa o movimento
+        if (selectedCard.source === 'waste') {
+          waste.pop();
+        } else if (selectedCard.source === 'tableau') {
+          tableau[selectedCard.colIndex].splice(selectedCard.cardIndex);
+          // Virar a última carta da coluna de origem se necessário
+          const sourceCol = tableau[selectedCard.colIndex];
+          if (sourceCol.length > 0 && !sourceCol[sourceCol.length - 1].faceUp) {
+            sourceCol[sourceCol.length - 1].faceUp = true;
+          }
+        }
+
+        tableau[colIndex].push(...movingCards);
+        selectedCard = null;
+      } else {
+        selectedCard = null;
+      }
+      render();
+    }
+
+    function handleFoundationClick(foundationIndex) {
+      if (!selectedCard) return;
+
+      let cardToMove = null;
+      if (selectedCard.source === 'waste') {
+        cardToMove = waste[waste.length - 1];
+      } else if (selectedCard.source === 'tableau') {
+        const col = tableau[selectedCard.colIndex];
+        if (selectedCard.cardIndex === col.length - 1) {
+          cardToMove = col[col.length - 1];
+        }
+      }
+
+      if (!cardToMove) return;
+
+      const targetFoundation = foundations[foundationIndex];
+      const requiredSuit = SUITS[foundationIndex];
+
+      let isValid = false;
+      if (cardToMove.suit === requiredSuit) {
+        if (targetFoundation.length === 0 && cardToMove.numericValue === 1) {
+          isValid = true; // Ás
+        } else if (targetFoundation.length > 0 && cardToMove.numericValue === targetFoundation[targetFoundation.length - 1].numericValue + 1) {
+          isValid = true;
+        }
+      }
+
+      if (isValid) {
+        targetFoundation.push(cardToMove);
+        if (selectedCard.source === 'waste') {
+          waste.pop();
+        } else if (selectedCard.source === 'tableau') {
+          tableau[selectedCard.colIndex].pop();
+          const sourceCol = tableau[selectedCard.colIndex];
+          if (sourceCol.length > 0 && !sourceCol[sourceCol.length - 1].faceUp) {
+            sourceCol[sourceCol.length - 1].faceUp = true;
+          }
+        }
+        selectedCard = null;
+      }
+      render();
+    }
+
+    function checkWin() {
+      const totalInFoundations = foundations.reduce((acc, f) => acc + f.length, 0);
+      if (totalInFoundations === 52) {
+        document.getElementById('win-message').style.display = 'block';
+      }
+    }
+
+    // Iniciar o jogo
+    initGame();
+  </script>
+</body>
+</html>
